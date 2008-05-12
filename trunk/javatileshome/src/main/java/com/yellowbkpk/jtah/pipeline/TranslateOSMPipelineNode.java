@@ -2,13 +2,11 @@ package com.yellowbkpk.jtah.pipeline;
 
 import com.ge.medit.util.Conduit;
 
-import com.sun.org.apache.xalan.internal.client.XSLTProcessorApplet;
 import com.yellowbkpk.jtah.Config;
 import com.yellowbkpk.jtah.pipeline.command.PipelineCommand;
 import com.yellowbkpk.jtah.pipeline.command.RenderCommand;
 import com.yellowbkpk.jtah.pipeline.command.TranslateCommand;
 
-import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
@@ -16,7 +14,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -24,10 +21,6 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.UUID;

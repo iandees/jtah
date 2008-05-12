@@ -6,8 +6,6 @@ import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.PNGTranscoder;
-import org.xml.sax.XMLFilter;
-import org.xml.sax.XMLReader;
 
 import com.yellowbkpk.jtah.pipeline.command.PipelineCommand;
 import com.yellowbkpk.jtah.pipeline.command.RenderCommand;
