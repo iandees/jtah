@@ -1,0 +1,24 @@
+<project name="jtah" xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+
+    <!-- The title of this module (used for reports). -->
+    <property name = "module.title"         value = "jtah" />
+    <property name = "module.parent.name"   value = "tah" />
+
+    <!-- Java compiler control information. -->
+    <property name = "javac.source"         value = "1.5" />
+    <property name = "javac.deprecation"    value = "on" />
+    <property name = "javac.nowarn"         value = "off" />
+    <property name = "javac.debug"          value = "on" />
+    <property name = "javac.optimize"       value = "off" />
+
+    <!-- Whether or not this module has test artifacts. -->
+    <property name = "has.test.artifacts"   value = "true" />
+
+    <!-- Additional classpath items specific to this module. -->
+    <path id="module.classpath">
+    </path>
+    
+    <!-- Import the common build file. -->
+    <import file="../build/module-build.xml"/>
+
+</project>

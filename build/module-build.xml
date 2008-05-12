@@ -1,0 +1,434 @@
+<project default="jar" xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+
+    <!-- Set the common build properties. -->
+    <property file="../build/common-build.properties" />
+
+    <!-- Import the reports build file. -->
+    <import file="../build/reports-build.xml"/>
+
+    <!-- Import the Maven dependencies. -->
+    <import file="../build/dependencies.xml"/>
+
+    <!-- The complete classpath for building module non-test code. -->
+    <path id="complete.classpath">
+        <pathelement location="${target.classes}" />
+
+        <!-- The declared module non-test dependencies from pom.xml. -->
+        <path refid="compile.dependencies" />
+
+        <!-- Additional classpath items specific to the module. -->
+        <path refid="module.classpath"/>
+    </path>
+
+    <!-- The complete classpath for building module test code. -->
+    <path id="complete.test.classpath">
+        <!-- Classpath for the code under test. -->
+        <path refid="complete.classpath" />
+
+        <!-- The test classes. -->
+        <pathelement location="${target.classes-test}" />
+
+        <!-- The declared module test dependencies from pom.xml. -->
+        <path refid="compile.test.dependencies" />
+    </path>
+
+    <target name="echo-header">
+        <echo>+-----------------------------------------+</echo>
+        <echo>  Module: ${ant.project.name}</echo>
+        <echo>+-----------------------------------------+</echo>
+    </target>
+
+    <target name="prepare" depends="echo-header">
+        <tstamp>
+            <format property="DATE_TIME" pattern="dd MMMM yyyy, HH:mm" />
+            <format property="TODAY" pattern="dd MMMM yyyy" />
+        </tstamp>
+
+        <!-- Set repository properties based on whether this is a snapshot version. -->
+
+        <condition property="repo.url" value="${snapshot.repo.url}">
+            <contains string="${maven.pom.version}" substring="SNAPSHOT" />
+        </condition>
+        <condition property="repo.url" value="${release.repo.url}">
+            <not> <contains string="${maven.pom.version}" substring="SNAPSHOT" /> </not>
+        </condition>
+
+        <condition property="repo.username" value="${snapshot.repo.username}">
+            <contains string="${maven.pom.version}" substring="SNAPSHOT" />
+        </condition>
+        <condition property="repo.username" value="${release.repo.username}">
+            <not> <contains string="${maven.pom.version}" substring="SNAPSHOT" /> </not>
+        </condition>
+
+        <condition property="repo.password" value="${snapshot.repo.password}">
+            <contains string="${maven.pom.version}" substring="SNAPSHOT" />
+        </condition>
+        <condition property="repo.password" value="${release.repo.password}">
+            <not> <contains string="${maven.pom.version}" substring="SNAPSHOT" /> </not>
+        </condition>
+    </target>
+
+    <target name="prepare-dashboard" depends="echo-header"
+                                     description="Prepare dashboard for file installation">
+        <echo>Making remote directory ${report.host.rootdir}/${ant.project.name}</echo>
+        <ftp action="mkdir"
+             server="${report.host}"
+             remotedir="${report.host.rootdir}/${ant.project.name}"
+             userid="${report.host.username}"
+             password="${report.host.password}"
+             ignoreNoncriticalErrors="true"/>
+        <echo>Making remote directory ${report.host.rootdir}/${ant.project.name}/dev</echo>
+        <ftp action="mkdir"
+             server="${report.host}"
+             remotedir="${report.host.rootdir}/${ant.project.name}/dev"
+             userid="${report.host.username}"
+             password="${report.host.password}"
+             ignoreNoncriticalErrors="true"/>
+        <echo>Making remote directory ${report.host.rootdir}/${ant.project.name}/dev/doc</echo>
+        <ftp action="mkdir"
+             server="${report.host}"
+             remotedir="${report.host.rootdir}/${ant.project.name}/dev/doc"
+             userid="${report.host.username}"
+             password="${report.host.password}"
+             ignoreNoncriticalErrors="true"/>
+        <echo>Making remote directory ${report.host.rootdir}/${ant.project.name}/release</echo>
+        <ftp action="mkdir"
+             server="${report.host}"
+             remotedir="${report.host.rootdir}/${ant.project.name}/release"
+             userid="${report.host.username}"
+             password="${report.host.password}"
+             ignoreNoncriticalErrors="true"/>
+        <echo>Making remote directory ${report.host.rootdir}/${ant.project.name}/release/doc</echo>
+        <ftp action="mkdir"
+             server="${report.host}"
+             remotedir="${report.host.rootdir}/${ant.project.name}/release/doc"
+             userid="${report.host.username}"
+             password="${report.host.password}"
+             ignoreNoncriticalErrors="true"/>
+    </target>
+
+    <!-- ============================ -->
+    <!--  Basic compilation targets.  -->
+    <!-- ============================ -->
+
+    <target name="resources">
+        <mkdir dir="${target.classes}" />
+        <copy todir="${target.classes}" includeEmptyDirs="false" failonerror="false">
+            <fileset dir="${src.main.resources}" />
+        </copy>
+    </target>
+
+    <!-- Handle native artifacts if the module has them. -->
+    <target name="native-libs" if="has.native.artifacts"
+                               depends="prepare"
+                               description="Copy native libraries">
+        <mkdir dir="${target.lib}" />
+
+        <copy todir="${target.lib}/windows" flatten="true">
+            <fileset dir="${src}">
+                <include name="**/windows*/*.properties"/>
+                <include name="**/windows*/*.dll"/>
+                <include name="**/windows*/*.jar"/>
+            </fileset>
+        </copy>
+        <copy todir="${target.lib}/linux_x86" flatten="true">
+            <fileset dir="${src}">
+                <include name="**/linux*/*.properties"/>
+                <include name="**/linux*/*.so"/>
+                <include name="**/linux*/*.jar"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="compile" depends="resources,native-libs" 
+                           description="Compile main sources">
+        <javac srcdir="${src.main.java}"
+               includes="**/*.java"
+               destdir="${target.classes}"
+               deprecation="${javac.deprecation}"
+               source="${javac.source}"
+               nowarn="${javac.nowarn}"
+               debug="${javac.debug}"
+               optimize="${javac.optimize}">
+            <classpath refid="complete.classpath" />
+        </javac>
+    </target>
+
+    <target name="resources-test" if="has.test.artifacts"
+                                  depends="compile">
+        <mkdir dir="${target.classes-test}" />
+
+<!-- This needs to be removed: all test ressources need to 
+     be placed in the src/test/resources directory.
+-->
+        <copy todir="${target.classes-test}" includeEmptyDirs="false">
+            <fileset dir="${src.test.java}">
+                <exclude name="**/*.h"/>
+                <exclude name="**/*.c"/>
+                <exclude name="**/*.so"/>
+                <exclude name="**/*.dll"/>
+                <exclude name="**/*.jar"/>
+                <exclude name="**/*.java"/>
+                <exclude name="**/*.sh"/>
+                <exclude name="**/package.html"/>
+                <exclude name="**/makefile*"/>
+                <exclude name="**/nmakefile*"/>
+                <exclude name="**/Makefile*"/>
+            </fileset>
+        </copy>
+        <copy todir="${target.classes-test}" includeEmptyDirs="false" failonerror="false">
+            <fileset dir="${src.test.resources}" />
+        </copy>
+    </target>
+
+    <target name="test-compile" if="has.test.artifacts" 
+                                depends="resources-test" 
+                                description="Compile test sources">
+        <javac srcdir="${src.test.java}"
+               includes="**/*.java"
+               destdir="${target.classes-test}"
+               deprecation="${javac.deprecation}"
+               source="${javac.source}"
+               nowarn="${javac.nowarn}"
+               debug="${javac.debug}"
+               optimize="${javac.optimize}">
+            <classpath refid="complete.test.classpath" />
+        </javac>
+    </target>
+
+    <!-- ================================ -->
+    <!--  Java ARchive (JAR) generation.  -->
+    <!-- ================================ -->
+
+    <target name="jar" depends="compile" description="Create module JAR">
+        <jar jarfile="${target}/${ant.project.name}-${maven.pom.version}.jar"
+             basedir="${target.classes}">
+            <manifest>
+                <attribute name="Version" value="${maven.pom.version}"/>
+                <attribute name="Build-Date" value="${TODAY}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="test-jar" if="has.test.artifacts" depends="test-compile" 
+                                                    description="Create module test JAR">
+        <jar jarfile="${target}/${ant.project.name}-${maven.pom.version}-tests.jar"
+             basedir="${target.classes-test}">
+            <manifest>
+                <attribute name="Corundum-Version" value="${maven.pom.version}"/>
+                <attribute name="Corundum-Build-Date" value="${TODAY}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- ============================== -->
+    <!--  Consolidated JAR generation.  -->
+    <!-- ============================== -->
+
+    <target name="consolidated-jar" depends="compile" description="Create consolidated module JAR">
+        <mkdir dir="${target.consolidate}" />
+        <delete file="${target}/${ant.project.name}-${maven.pom.version}-consolidated.jar" />
+
+        <!-- UnJAR all of the dependencies. -->
+        <unjar dest="${target.consolidate}">
+            <fileset refid="compile.dependencies.fileset" />
+        </unjar>
+
+        <!-- JAR them all up. -->
+        <jar jarfile="${target}/${ant.project.name}-${maven.pom.version}-consolidated.jar">
+            <fileset dir="${target.consolidate}">
+                <include name="**/*" />
+                <exclude name="**/*.SF" />
+                <exclude name="**/*.DSA" />
+            </fileset>
+            <fileset dir="${target.classes}" />
+        </jar>
+
+        <!-- Delete directory that was generated (and the 50MB of expanded data). -->
+        <delete dir="${target.consolidate}" />
+    </target>
+
+    <!-- ============================================================ -->
+    <!--  Snapshot and release artifact installation and deployment.  -->
+    <!-- ===============================================-============ -->
+
+    <target name="install" depends="install-main-only,install-main-and-tests" />
+    <target name="deploy"  depends="deploy-main-only,deploy-main-and-tests" />
+
+    <target name="install-main-only" unless="has.test.artifacts" depends="jar">
+        <artifact:install file="${target}/${ant.project.name}-${maven.pom.version}.jar">
+            <pom refid="maven.pom" />
+        </artifact:install>
+    </target>
+    <target name="install-main-and-tests" if="has.test.artifacts" depends="jar,test-jar">
+        <artifact:install file="${target}/${ant.project.name}-${maven.pom.version}.jar">
+            <pom refid="maven.pom" />
+            <attach file="${target}/${ant.project.name}-${maven.pom.version}-tests.jar"
+                    classifier="tests" />
+        </artifact:install>
+    </target>
+
+    <target name="deploy-main-only" unless="has.test.artifacts" depends="install">
+        <artifact:install-provider artifactId="wagon-ftp" version="1.0-beta-2"/>
+        <artifact:deploy file="${target}/${ant.project.name}-${maven.pom.version}.jar">
+            <pom refid="maven.pom" />
+            <remoteRepository url="${repo.url}">
+                <authentication username="${repo.username}" password="${repo.password}" />
+            </remoteRepository>
+        </artifact:deploy>
+    </target>
+    <target name="deploy-main-and-tests" if="has.test.artifacts" depends="install">
+        <artifact:install-provider artifactId="wagon-ftp" version="1.0-beta-2"/>
+        <artifact:deploy file="${target}/${ant.project.name}-${maven.pom.version}.jar">
+            <pom refid="maven.pom" />
+            <attach file="${target}/${ant.project.name}-${maven.pom.version}-tests.jar"
+                    classifier="tests" />
+            <remoteRepository url="${repo.url}">
+                <authentication username="${repo.username}" password="${repo.password}" />
+            </remoteRepository>
+        </artifact:deploy>
+    </target>
+
+    <!-- ================================================ -->
+    <!--  Module distribution generation and deployment.  -->
+    <!-- ================================================ -->
+
+    <target name="release-notes" depends="prepare">
+        <mkdir dir="${target.dist}" />
+
+        <xslt in="${doc}/releasenotes.xml"
+              out = "${target.dist}/releasenotes.html"
+              style="../build/releasenotes.xsl">
+            <param name="module.name"     expression="${ant.project.name}" />
+            <param name="module.title"    expression="${module.title}" />
+            <param name="release.version" expression="${maven.pom.version}" />
+            <param name="release.date"    expression="${DATE_TIME}" />
+        </xslt>
+    </target>
+
+    <target name="source-zip">
+        <mkdir dir="${target.dist}" />
+        <delete file="${target.dist}/${ant.project.name}-${maven.pom.version}-source.zip"/>
+
+        <zip destfile="${target.dist}/${ant.project.name}-${maven.pom.version}-source.zip">
+            <zipfileset dir="${basedir}"
+                        includes="${src.main}/**,${src.test}/**">
+            </zipfileset>
+        </zip>
+    </target>
+
+    <target name="gen-dist" depends="jar,test-jar,test,junitreport,javadoc">
+        <!-- Make directories to ensure no errors when attempting to Zip below. -->
+        <mkdir dir="${target.dist}" />
+        <mkdir dir="${target.lib}" />
+        <mkdir dir="${target.doc.api}" />
+        <mkdir dir="${target.doc.test}" />
+
+        <!-- Zip up the distribution. -->
+        <zip destfile="${target.dist}/${ant.project.name}-${maven.pom.version}.zip">
+
+            <!-- Include the module JARs. -->
+            <zipfileset dir="${target}"
+                        includes="*.jar"
+                        prefix="${ant.project.name}-${maven.pom.version}">
+            </zipfileset>
+
+            <!-- Include the API documentation. -->
+            <zipfileset dir="${target.doc.api}"
+                        includes="**"
+                        prefix="${ant.project.name}-${maven.pom.version}/doc/api">
+            </zipfileset>
+
+            <!-- Include the unit test results. -->
+            <zipfileset dir="${target.doc.test}"
+                        includes="**"
+                        excludes="**/TEST-*.xml"
+                        prefix="${ant.project.name}-${maven.pom.version}/doc/test">
+            </zipfileset>
+
+            <!-- Include native artifacts (if any). -->
+            <zipfileset dir="${target.lib}"
+                        includes="**"
+                        prefix="${ant.project.name}-${maven.pom.version}/lib">
+            </zipfileset>
+
+            <!-- Include release notes (available if a release distribution). -->
+            <zipfileset dir="${target.dist}"
+                        includes="releasenotes.html"
+                        prefix="${ant.project.name}-${maven.pom.version}">
+            </zipfileset>
+
+            <!-- Include source Zip file (available if a release distribution). -->
+            <zipfileset dir="${target.dist}"
+                        includes="*-source.zip"
+                        prefix="${ant.project.name}-${maven.pom.version}">
+            </zipfileset>
+        </zip>
+
+        <delete file="${target.dist}/${ant.project.name}-${maven.pom.version}-source.zip"/>
+    </target>
+
+    <macrodef name="install-dist" description="Install a distribution to a remote server">
+        <attribute name="type"     description="Type of distribution: dev or release" />
+        <attribute name="server"   description="The address of the remote server" />
+        <attribute name="userid"   description="The login ID to use on remote server" />
+        <attribute name="password" description="The password to use on remote server" />
+        <attribute name="basedir"  description="Remote server base directory" />
+        <sequential>
+            <echo>Installing @{type} distribution to @{server}:@{basedir}/@{type}</echo> 
+            <ftp action="send"
+                 server="@{server}"
+                 userid="@{userid}"
+                 password="@{password}"
+                 remotedir="@{basedir}/@{type}"
+                 depends="no"
+                 binary="yes"
+                 ignoreNoncriticalErrors="true">
+                <fileset dir="${target.dist}">
+                    <include name="${ant.project.name}-*.zip"/>
+                    <exclude name="${ant.project.name}-*source.zip"/>
+                </fileset>
+            </ftp>
+        </sequential>
+    </macrodef>
+
+    <target name="install-dist-dev" depends="gen-dist" 
+                                    description="Install a development distribution">
+        <install-dist type="dev" server="${report.host}"
+                                 userid="${report.host.username}"
+                                 password="${report.host.password}"
+                                 basedir="${report.host.rootdir}/${ant.project.name}" />
+    </target>
+
+    <target name="install-dist-release" depends="release-notes,source-zip,gen-dist" 
+                                        description="Install a release distribution">
+        <install-dist type="release" server="${report.host}"
+                                     userid="${report.host.username}"
+                                     password="${report.host.password}"
+                                     basedir="${report.host.rootdir}/${ant.project.name}" />
+    </target>
+
+	<target name="classpath-helper"
+	        description="Writes the dependencies to the screen.">
+		<property name="maven.repo.local" value="${user.home}${file.separator}.m2${file.separator}repository"/>
+		
+		<pathconvert refid="compile.dependencies" property="files.runtime" pathsep="${line.separator}">
+			<map from="${maven.repo.local}" to="M2_REPO" />
+		</pathconvert>
+		
+		<pathconvert refid="compile.test.dependencies" property="files.test" pathsep="${line.separator}">
+			<map from="${maven.repo.local}" to="M2_REPO" />
+		</pathconvert>
+		
+		<echo>Runtime Dependencies</echo>
+		<echo>${files.runtime}</echo>
+		<echo></echo>
+		<echo>Test Dependencies</echo>
+		<echo>${files.test}</echo>
+	</target>
+    
+	<target name="clean" depends="echo-header" description="Delete all build artifacts">
+        <delete dir="${target}"/>
+    </target>
+	
+</project>

@@ -1,0 +1,651 @@
+<project xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+
+    <!--
+      This Ant build file is intended to be imported in order to include
+      report generation and installation targets.
+    -->
+
+    <!-- =========================== -->
+    <!--  Unit test report targets.  -->
+    <!-- =========================== -->
+
+    <target name="prepare-test" depends="prepare">
+        <!-- Set the native library path property. -->
+        <condition property="native.library.path" value="${target.lib}/windows">
+            <os family="windows"/>
+        </condition>
+        <condition property="native.library.path" value="${target.lib}/linux_x86">
+            <equals arg1="${os.name}" arg2="Linux" casesensitive="false"/>
+        </condition>
+        <condition property="native.library.path" value="ERROR-NATIVE_LIBRARY_PATH_NOT_SET">
+            <not>
+                <isset property="${native.library.path}"/>
+            </not>
+        </condition>
+        <echo message="native.library.path: ${native.library.path}"/>
+
+        <taskdef resource="checkstyletask.properties">
+            <classpath refid="report.tasks.classpath" />
+        </taskdef>
+        <taskdef name="pmd" classname="net.sourceforge.pmd.ant.PMDTask">
+            <classpath refid="report.tasks.classpath" />
+        </taskdef>
+        <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask">
+            <classpath refid="findbugs.task.classpath" />
+        </taskdef>
+
+        <mkdir dir="${target.classes-test}" />
+        <mkdir dir="${target.doc.test}" />
+    </target>
+
+    <target name="run-one-test" depends="prepare-test"
+                                description="Run One unit test">
+
+        <junit printsummary="yes" haltonfailure="no" fork="yes" timeout="720000" >
+            <classpath>
+                <path refid="complete.test.classpath" />
+                <pathelement path="${ant.home}/lib/clover.jar"/>
+            </classpath>
+
+            <formatter type="plain" />
+
+            <test todir="${target.doc.test}" name="${test.name}" />
+         </junit>
+    </target>
+
+    <target name="test" if="has.test.artifacts"
+                        depends="prepare-test"
+                        description="Run unit tests">
+
+        <junit printsummary="yes" haltonfailure="no" fork="yes" timeout="600000" >
+            <classpath>
+                <path refid="complete.test.classpath" />
+                <pathelement path="${ant.home}/lib/clover.jar"/>
+            </classpath>
+
+            <formatter type="xml" />
+
+            <batchtest todir="${target.doc.test}">
+                <fileset dir="${target.classes-test}">
+                    <include name="**/*Test.class" />
+                    <exclude name="**/*Suite.class" />
+                </fileset>
+            </batchtest>
+         </junit>
+    </target>
+
+    <target name="regression-test" depends="compile,prepare-test"
+                                   description="Run unit tests from a previous version">
+        <available property="old.tests.available" file="${ant.project.name}-test.jar"/>
+        <fail unless="old.tests.available">
+            Could not find previous version tests JAR: ${ant.project.name}-test.jar
+        </fail>
+
+        <delete dir="${target.reg-test}" />
+        <mkdir dir="${target.reg-test}" />
+        <unjar src="${ant.project.name}-test.jar" dest="${target.reg-test}" />
+
+        <junit printsummary="yes" haltonfailure="no" fork="yes" timeout="600000"
+               failureproperty="regression.fail" errorproperty="regression.error">
+            <classpath>
+                <pathelement location="${target.classes}"/>
+                <pathelement location="${target.reg-test}"/>
+                <path refid="complete.test.classpath" />
+            </classpath>
+
+            <formatter type="xml" />
+
+            <batchtest todir="${target.reg-test}">
+                <fileset dir="${target.reg-test}">
+                    <include name="**/*Test.class"/>
+                    <exclude name="**/*Suite.class" />
+                </fileset>
+            </batchtest>
+         </junit>
+
+        <fail if="regression.fail">
+            Test failures detected during regression testing.
+        </fail>
+        <fail if="regression.error">
+            Test errors detected during regression testing.
+        </fail>
+    </target>
+
+    <target name="junitreport" if="has.test.artifacts"
+                               depends="prepare-test"
+                               description="Generate a unit test report">
+        <junitreport todir="${target.doc.test}" tofile="testreport-latest.xml">
+            <fileset dir="${target.doc.test}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="noframes" todir="${target.doc.test}"/>
+        </junitreport>
+
+        <move file="${target.doc.test}/junit-noframes.html"
+              tofile="${target.doc.test}/testreport-latest.html" />
+
+        <!-- Timestamp report underneath "Unit Test Results"; add the module title. -->
+        <replace file="${target.doc.test}/testreport-latest.html"
+                 token="&lt;h1&gt;Unit Test Results&lt;/h1&gt;"
+                 value="&lt;h1&gt;Unit Test Results - Module: ${module.title}&lt;/h1&gt;Module Version ${maven.pom.version}&lt;br/&gt;Run on: ${DATE_TIME}" />
+    </target>
+
+    <!-- ================================== -->
+    <!--  Unit test code coverage targets.  -->
+    <!-- ================================== -->
+
+    <taskdef resource="clovertasks"/>
+
+    <target name="with-clover" description="Include Clover instrumentation">
+        <mkdir dir="${target.doc.clover}" />
+
+        <clover-setup initString="${target.doc.clover}/clover.db">
+            <!-- Exclude debug and trace logging code from coverage metrics. -->
+            <statementContext name="debugLogging" regexp="(.*isDebugEnabled.*|.*isTraceEnabled.*|.*\.debug.*|.*\.trace.*)" />
+        </clover-setup>
+    </target>
+
+    <target name="compile-coverage" if="has.test.artifacts"
+                                    depends="with-clover,compile" />
+
+    <target name="coverage-report" if="has.test.artifacts"
+                                   depends="with-clover,test"
+                                   description="Create code coverage reports">
+        <clover-report>
+            <current outfile="${target.doc.clover}">
+                <format type="html" filter="debugLogging"/>
+            </current>
+        </clover-report>
+    </target>
+
+    <!-- ============================ -->
+    <!--  Checkstyle report targets.  -->
+    <!-- ============================ -->
+
+    <target name="checkstyle" depends="prepare-test"
+                              description="Check source code style">
+        <mkdir dir="${target.doc.checkstyle}" />
+        <mkdir dir="${target.doc.l2.checkstyle}" />
+
+        <!-- Generate the "level one" (most serious errors) Checkstyle report. -->
+        <echo>Generating Checkstyle report, level one</echo>
+        <checkstyle config="${basedir}/../build/metrics/checkstyle/level_one.xml"
+                    failOnViolation="false">
+            <fileset dir="${src.main.java}">
+                <include name="**/*.java"/>
+            </fileset>
+            <formatter type="xml" toFile="${target.doc.checkstyle}/checkstyle.xml"/>
+            <classpath>
+                <path refid="report.tasks.classpath"/>
+                <path refid="compile.dependencies"/>
+                <pathelement location="${target.classes}"/>
+            </classpath>
+        </checkstyle>
+
+        <!-- Generate the "level two" (less serious/informational errors) Checkstyle report. -->
+        <echo>Generating Checkstyle report, level two</echo>
+        <checkstyle config="${basedir}/../build/metrics/checkstyle/level_two.xml"
+                    failOnViolation="false">
+            <fileset dir="${src.main.java}">
+                <include name="**/*.java"/>
+            </fileset>
+            <formatter type="xml" toFile="${target.doc.l2.checkstyle}/checkstyle.xml"/>
+            <classpath>
+                <path refid="report.tasks.classpath"/>
+                <path refid="compile.dependencies"/>
+                <pathelement location="${target.classes}"/>
+            </classpath>
+        </checkstyle>
+
+        <!-- Format the XML report into HTML. -->
+        <xslt basedir="${target.doc.checkstyle}"
+              includes="checkstyle.xml"
+              destdir="${target.doc.checkstyle}"
+              style="../build/metrics/checkstyle/checkstyle-noframes.xsl"
+              force="true">
+        </xslt>
+
+        <!-- Format the level two XML report into HTML. -->
+        <xslt basedir="${target.doc.l2.checkstyle}"
+              includes="checkstyle.xml"
+              destdir="${target.doc.l2.checkstyle}"
+              style="../build/metrics/checkstyle/checkstyle-noframes.xsl"
+              force="true">
+        </xslt>
+
+        <!-- Label and timestamp the report. -->
+        <replace file="${target.doc.checkstyle}/checkstyle.html"
+                 token="&lt;h2&gt;CheckStyle Audit&lt;/h2&gt;"
+                 value="&lt;h2&gt;CheckStyle Audit - Module: ${module.title}&lt;/h2&gt;Module version: ${maven.pom.version}&lt;br/&gt;Run on: ${DATE_TIME}&lt;br/&gt;" />
+
+        <!-- Label and timestamp the level 2 report. -->
+        <replace file="${target.doc.l2.checkstyle}/checkstyle.html"
+                 token="&lt;h2&gt;CheckStyle Audit&lt;/h2&gt;"
+                 value="&lt;h2&gt;CheckStyle Level 2 Audit - Module: ${module.title}&lt;/h2&gt;Module version: ${maven.pom.version}&lt;br/&gt;Run on: ${DATE_TIME}&lt;br/&gt;" />
+    </target>
+
+    <!-- ========================== -->
+    <!--  Findbugs report targets.  -->
+    <!-- ========================== -->
+
+    <target name="findbugs" depends="prepare-test"
+                            description="Find well understood bugs">
+        <mkdir dir="${target.doc.findbugs}" />
+        <mkdir dir="${target.doc.l2.findbugs}" />
+
+        <echo>Generating Findbugs report, level one</echo>
+        <findbugs output="xml:withMessages"
+                  outputFile="${target.doc.findbugs}/findbugs.xml"
+                  jvmargs="-Xmx256M">
+            <classpath refid="findbugs.task.classpath" />
+            <pluginList>
+                <fileset refid="findbugs.pluginlist.fileset" />
+            </pluginList>
+            <auxClasspath refid="complete.classpath" />
+            <sourcePath path="${src.main.java}" />
+            <class location="${target}/${ant.project.name}-${maven.pom.version}.jar" />
+        </findbugs>
+
+        <echo>Generating Findbugs report, level two</echo>
+        <findbugs output="xml:withMessages"
+                  outputFile="${target.doc.l2.findbugs}/findbugs.xml"
+                  jvmargs="-Xmx256M">
+            <classpath refid="findbugs.task.classpath" />
+            <pluginList>
+                <fileset refid="findbugs.pluginlist.fileset" />
+            </pluginList>
+            <auxClasspath refid="complete.classpath" />
+            <sourcePath path="${src.main.java}" />
+            <class location="${target}/${ant.project.name}-${maven.pom.version}.jar" />
+        </findbugs>
+
+        <!-- Format the XML report into HTML. -->
+        <xslt in="${target.doc.findbugs}/findbugs.xml"
+              out="${target.doc.findbugs}/findbugs.html"
+              style="../build/metrics/findbugs/default.xsl">
+        </xslt>
+
+        <!-- Format the level two XML report into HTML. -->
+        <xslt in="${target.doc.l2.findbugs}/findbugs.xml"
+              out="${target.doc.l2.findbugs}/findbugs.html"
+              style="../build/metrics/findbugs/default.xsl">
+        </xslt>
+
+        <!-- Label and timestamp the report. -->
+        <replace file="${target.doc.findbugs}/findbugs.html"
+                 token="&lt;h1&gt;FindBugs Report&lt;/h1&gt;"
+                 value="&lt;h1&gt;FindBugs Report - Module: ${module.title}&lt;/h1&gt;Module version: ${maven.pom.version}&lt;br&gt;Run on: ${DATE_TIME}&lt;br&gt;" />
+
+        <!-- Label and timestamp the level 2 report. -->
+        <replace file="${target.doc.l2.findbugs}/findbugs.html"
+                 token="&lt;h1&gt;FindBugs Report&lt;/h1&gt;"
+                 value="&lt;h1&gt;FindBugs Level 2 Report - Module: ${module.title}&lt;/h1&gt;Module version: ${maven.pom.version}&lt;br&gt;Run on: ${DATE_TIME}&lt;br&gt;" />
+    </target>
+
+    <!-- ===================== -->
+    <!--  PMD report targets.  -->
+    <!-- ===================== -->
+
+    <target name="pmd" depends="prepare-test"
+                       description="Run PMD source code analysis">
+        <mkdir dir="${target.doc.pmd}" />
+        <mkdir dir="${target.doc.l2.pmd}" />
+
+        <!-- Generate the Level One PMD Report -->
+        <echo>Generating PMD report, level one</echo>
+        <pmd shortFilenames="true"
+             rulesetfiles="${basedir}/../build/metrics/pmd/level_one.xml"
+             targetjdk="${javac.source}"
+             encoding="UTF-8">
+            <formatter type="xml" toFile="${target.doc.pmd}/pmd.xml"/>
+            <fileset dir="${src.main.java}">
+                <include name="**/*.java"/>
+            </fileset>
+        </pmd>
+
+        <!-- Generate the Level Two PMD Report -->
+        <echo>Generating PMD report, level two</echo>
+        <pmd shortFilenames="true"
+             rulesetfiles="${basedir}/../build/metrics/pmd/level_two.xml"
+             targetjdk="${javac.source}"
+             encoding="UTF-8">
+            <formatter type="xml" toFile="${target.doc.l2.pmd}/pmd.xml"/>
+            <fileset dir="${src.main.java}">
+                <include name="**/*.java"/>
+            </fileset>
+        </pmd>
+
+        <!-- Transform the XML for level one in to HTML. -->
+        <xslt in="${target.doc.pmd}/pmd.xml"
+              out="${target.doc.pmd}/pmd.html"
+              style="../build/metrics/pmd/wz-pmd-report.xslt">
+        </xslt>
+
+        <!-- Transform the XML for level two in to HTML. -->
+        <xslt in="${target.doc.l2.pmd}/pmd.xml"
+              out="${target.doc.l2.pmd}/pmd.html"
+              style="../build/metrics/pmd/wz-pmd-report.xslt">
+        </xslt>
+
+        <!-- Label and timestamp the report. -->
+        <replace file="${target.doc.pmd}/pmd.html"
+                 token="&lt;/H1&gt;"
+                 value="&lt;/H1&gt;&lt;br/&gt;Module: &lt;b/&gt;${module.title}&lt;/b&gt;&lt;br/&gt;Module version: ${maven.pom.version}&lt;br/&gt;Run on: ${DATE_TIME}&lt;br/&gt;" />
+
+        <!-- Label and timestamp the level two report. -->
+        <replace file="${target.doc.l2.pmd}/pmd.html"
+                 token="&lt;/H1&gt;"
+                 value="&lt;/H1&gt;&lt;br/&gt;Module: &lt;b/&gt;${module.title}&lt;/b&gt;&lt;br/&gt;Module version: ${maven.pom.version}&lt;br/&gt;Run on: ${DATE_TIME}&lt;br/&gt;" />
+        <replace file="${target.doc.l2.pmd}/pmd.html"
+                 token=" Report"
+                 value=" Report - Level 2" />
+    </target>
+
+    <!-- ========================= -->
+    <!--  JDepend report targets.  -->
+    <!-- ========================= -->
+
+    <target name="jdepend" depends="prepare-test"
+                           description="Run JDepend source code analysis">
+        <taskdef name="jdepend" classname="org.apache.tools.ant.taskdefs.optional.jdepend.JDependTask">
+            <classpath refid="report.tasks.classpath" />
+            <classpath location="${ant.home}/lib" />
+        </taskdef>
+
+        <mkdir dir="${target.doc.jdepend}" />
+
+        <jdepend format="xml"
+                 outputfile="${target.doc.jdepend}/jdepend.xml"
+                 classpathref="report.tasks.classpath">
+            <exclude name="java.*"/>
+            <exclude name="javax.*"/>
+            <sourcespath>
+                <pathelement location="${src.main.java}"/>
+            </sourcespath>
+            <classespath>
+                <pathelement location="${target.classes}" />
+            </classespath>
+        </jdepend>
+
+        <xslt in="${target.doc.jdepend}/jdepend.xml"
+              out="${target.doc.jdepend}/jdepend.html"
+              style="../${build}/metrics/jdepends/jdepend.xsl">
+        </xslt>
+
+        <!-- Label and timestamp the report. -->
+        <replace file="${target.doc.jdepend}/jdepend.html"
+                 token="JDepend Analysis"
+                 value="JDepend Analysis - Module: ${module.title}" />
+        <replace file="${target.doc.jdepend}/jdepend.html"
+                 token="&lt;/h1&gt;"
+                 value="&lt;/h1&gt;&lt;br/&gt;Module version: ${maven.pom.version}&lt;br/&gt;Run on: ${DATE_TIME}&lt;br/&gt;" />
+    </target>
+
+    <!-- ===================== -->
+    <!--  CPD report targets.  -->
+    <!-- ===================== -->
+
+    <target name="cpd" depends="prepare-test"
+                       description="Run CPD source code analysis">
+        <taskdef name="cpd" classname="net.sourceforge.pmd.cpd.CPDTask">
+            <classpath refid="report.tasks.classpath" />
+        </taskdef>
+
+        <mkdir dir="${target.doc.cpd}" />
+
+        <cpd minimumTokenCount="100"
+             language="java"
+             format="xml"
+             encoding="UTF-8"
+             outputFile="${target.doc.cpd}/cpd.xml">
+            <fileset dir="${src.main.java}">
+                <include name="**/*.java"/>
+            </fileset>
+        </cpd>
+
+        <xslt in="${target.doc.cpd}/cpd.xml"
+              out="${target.doc.cpd}/cpd.html"
+              style="../build/metrics/cpd/cpdhtml.xslt">
+            <outputproperty name="encoding" value="iso8859_1"/>
+        </xslt>
+
+        <!-- Label and timestamp the report. -->
+        <replace file="${target.doc.cpd}/cpd.html"
+                 token="Summary of duplicated code"
+                 value="Summary of duplicated code (CPD report) - Module: ${module.title}" />
+        <replace file="${target.doc.cpd}/cpd.html"
+                 token="&lt;/h2&gt;"
+                 value="&lt;/h2&gt;&lt;br/&gt;Module version: ${maven.pom.version}&lt;br/&gt;Run on: ${DATE_TIME}&lt;br/&gt;&lt;br/&gt;" />
+    </target>
+
+    <!-- ============================================ -->
+    <!--  Java Coding Standards audit report target.  -->
+    <!-- ============================================ -->
+
+    <target name="coding-stds" depends="prepare-test"
+                               description="Run coding standards analysis">
+        <mkdir dir="${target.doc.coding-stds}" />
+
+        <echo>Generating Checkstyle Java Coding Standards analysis</echo>
+        <checkstyle config="${basedir}/../build/metrics/checkstyle/coding-stds.xml"
+                    failOnViolation="false">
+            <fileset dir="${src.main.java}">
+                <include name="**/*.java"/>
+            </fileset>
+            <formatter type="xml" toFile="${target.doc.coding-stds}/coding-stds-checkstyle.xml"/>
+            <classpath>
+                <path refid="report.tasks.classpath"/>
+                <path refid="compile.dependencies"/>
+                <pathelement location="${target.classes}"/>
+            </classpath>
+        </checkstyle>
+
+        <echo>Generating PMD Java Coding Standards analysis</echo>
+        <pmd shortFilenames="true"
+             rulesetfiles="${basedir}/../build/metrics/pmd/coding-stds.xml"
+             targetjdk="${javac.source}"
+             encoding="UTF-8">
+            <formatter type="xml" toFile="${target.doc.coding-stds}/coding-stds-pmd.xml"/>
+            <fileset dir="${src.main.java}">
+                <include name="**/*.java"/>
+            </fileset>
+        </pmd>
+
+        <echo>Generating Findbugs Java Coding Standards analysis</echo>
+        <findbugs includeFilter="${basedir}/../build/metrics/findbugs/coding-stds.xml"
+                  output="xml:withMessages"
+                  outputFile="${target.doc.coding-stds}/coding-stds-findbugs.xml"
+                  jvmargs="-Xmx256M">
+            <classpath refid="findbugs.task.classpath" />
+            <pluginList>
+                <fileset refid="findbugs.pluginlist.fileset" />
+            </pluginList>
+            <auxClasspath refid="complete.classpath" />
+            <sourcePath path="${src.main.java}" />
+            <class location="${target}/${ant.project.name}-${maven.pom.version}.jar" />
+        </findbugs>
+
+        <property name="build.coding-stds.exec" value="../${build}/coding-stds-audit.pl" />
+
+        <exec executable="perl" output="${target.doc.coding-stds}/coding-stds-audit.xml">
+            <arg value="${build.coding-stds.exec}" />
+            <arg value="-r${module.title} Coding Standards Audit Report"/>
+            <arg value="-m${target.doc}"/>
+            <arg value="-s${src}/main/java"/>
+        </exec>
+
+        <xslt in="${target.doc.coding-stds}/coding-stds-audit.xml"
+              out="${target.doc.coding-stds}/coding-stds-audit.html"
+              style="../build/metrics/coding-stds/coding-stds-audit.xslt">
+            <outputproperty name="encoding" value="iso8859_1"/>
+        </xslt>
+    </target>
+
+    <!-- ==================================== -->
+    <!--  Java API documentation generation.  -->
+    <!-- ==================================== -->
+
+    <target name="javadoc" depends="compile" description="Create API documentation">
+        <delete dir="${target.doc.api}" />
+        <mkdir dir="${target.doc.api}" />
+
+        <javadoc packagenames="*"
+                 maxmemory="256M"
+                 destdir="${target.doc.api}"
+                 author="true"
+                 version="true"
+                 use="true"
+                 package="true"
+                 source="${javac.source}"
+                 header="${TODAY}"
+                 windowtitle="${module.title}"
+                 doctitle="${module.title} API Documentation">
+
+            <sourcepath>
+                <pathelement location="${src.main.java}" />
+            </sourcepath>
+            <classpath refid="complete.classpath" />
+
+            <link offline="true" href="${j2se.api.url}" packagelistLoc="../${build}" />
+
+            <!-- Custom tag definitions. -->
+            <tag name="ts_comment"  scope="fields"  description="Translator's string description:" />
+            <tag name="ts_widget"   scope="fields"  description="UI element of string:" />
+            <tag name="ts_maxchars" scope="fields"  description="Maximum characters for string:" />
+            <tag name="ts_maxlines" scope="fields"  description="Maximum lines for string:" />
+            <tag name="ts_notrans"  scope="fields"  description="Whether to translate string" />
+            <tag name="ts_obsolete" scope="fields"  description="String is Obsolete" />
+            <tag name="mr_comment"  scope="types"   description="Message resource description:" />
+            <tag name="reviewed"    enabled="false" description="Designates reviewed code:" />
+            <tag name="action"      enabled="false" description="Outstanding code review action:" />
+            <tag name="test"        enabled="false" description="Testing information:" />
+            <tag name="enhance"     scope="all"     description="Future enhancement:" />
+            <tag name="todo"        enabled="false" description="TO-DO:" />
+        </javadoc>
+    </target>
+
+    <!-- ================================ -->
+    <!--  Install all generated reports.  -->
+    <!-- ================================ -->
+
+    <macrodef name="remove-reports" description="Remove reports from a remote server">
+        <attribute name="type"     description="Type of distribution: dev or release" />
+        <attribute name="server"   description="The address of the remote server" />
+        <attribute name="userid"   description="The login ID to use on remote server" />
+        <attribute name="password" description="The password to use on remote server" />
+        <attribute name="basedir"  description="Remote server base directory" />
+        <sequential>
+            <echo>Removing @{type} reports from @{server}:@{basedir}/@{type}/doc</echo>
+            <ftp action="del"
+                 server="@{server}"
+                 userid="@{userid}"
+                 password="@{password}"
+                 remotedir="@{basedir}/@{type}/doc"
+                 ignoreNonCriticalErrors="true">
+                <fileset includes="**" />
+            </ftp>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="install-reports" description="Install reports to a remote server">
+        <attribute name="type"     description="Type of distribution: dev or release" />
+        <attribute name="server"   description="The address of the remote server" />
+        <attribute name="userid"   description="The login ID to use on remote server" />
+        <attribute name="password" description="The password to use on remote server" />
+        <attribute name="basedir"  description="Remote server base directory" />
+        <sequential>
+            <echo>Installing @{type} reports to @{server}:@{basedir}/@{type}/doc</echo>
+            <ftp action="send"
+                 server="@{server}"
+                 userid="@{userid}"
+                 password="@{password}"
+                 remotedir="@{basedir}/@{type}/doc"
+                 ignoreNonCriticalErrors="true">
+                <fileset dir="${target.doc}" excludes="**/*.xml,**/*.jar" />
+            </ftp>
+        </sequential>
+    </macrodef>
+
+    <target name="remove-reports-dev" depends="prepare-test"
+                                      description="Remove existing development quality reports">
+        <remove-reports type="dev" server="${report.host}"
+                                   userid="${report.host.username}"
+                                   password="${report.host.password}"
+                                   basedir="${report.host.rootdir}/${ant.project.name}" />
+    </target>
+
+    <target name="remove-reports-release" depends="prepare-test"
+                                          description="Remove existing release quality reports">
+        <remove-reports type="release" server="${report.host}"
+                                       userid="${report.host.username}"
+                                       password="${report.host.password}"
+                                       basedir="${report.host.rootdir}/${ant.project.name}" />
+    </target>
+
+    <target name="install-reports-dev" depends="prepare-test"
+                                       description="Install development quality reports">
+        <mkdir dir="${target.doc}" />
+        <install-reports type="dev" server="${report.host}"
+                                    userid="${report.host.username}"
+                                    password="${report.host.password}"
+                                    basedir="${report.host.rootdir}/${ant.project.name}" />
+    </target>
+
+    <target name="install-reports-release" depends="prepare-test"
+                                           description="Install release quality reports">
+        <mkdir dir="${target.doc}" />
+        <install-reports type="release" server="${report.host}"
+                                        userid="${report.host.username}"
+                                        password="${report.host.password}"
+                                        basedir="${report.host.rootdir}/${ant.project.name}" />
+    </target>
+
+    <!-- =============================================== -->
+    <!--  Module web site generation and installation..  -->
+    <!-- =============================================== -->
+
+    <target name="gen-site" depends="prepare-test"
+                            description="Generate module site HTML page">
+        <mkdir dir="${target.site}" />
+
+        <copy todir="${target.site}">
+            <fileset dir="../build/site">
+                <include name="css/**" />
+                <include name="images/**" />
+            </fileset>
+        </copy>
+        <xslt in="${src.site}/site.xml"
+              out = "${target.site}/index.html"
+              style="../build/site/site.xsl"
+              destdir="${target.site}">
+            <param name="date" expression="${DATE_TIME}" />
+            <param name="project" expression="${module.title}" />
+            <param name="dashboard" expression="http://${report.host}/${module.parent.name}" />
+        </xslt>
+    </target>
+
+    <target name="install-site" depends="gen-site"
+                                description="Install module site HTML page">
+        <ftp action="send"
+             server="${report.host}"
+             userid="${report.host.username}"
+             password="${report.host.password}"
+             remotedir="${report.host.rootdir}/${ant.project.name}"
+             depends="no"
+             binary="yes"
+             ignoreNoncriticalErrors="true">
+            <fileset dir="${target.site}" includes="**" />
+        </ftp>
+    </target>
+
+    <!-- ===================================================================== -->
+    <!--  A clean target that specifically deletes the classes-test directory  -->
+    <!-- ===================================================================== -->
+
+    <target name="test-clean" if="has.test.artifacts"
+                              description="Delete all of a module's test classes.">
+        <delete dir="${target.classes-test}" />
+        <mkdir dir="${target.classes-test}" />
+    </target>
+
+</project>
