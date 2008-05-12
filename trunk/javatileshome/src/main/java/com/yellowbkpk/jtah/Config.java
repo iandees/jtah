@@ -8,5 +8,6 @@ public class Config {
     public static final String OSM_BASE_URL = "http://www.openstreetmap.org/api/";
     public static final String OSM_VERSION = "0.5";
     public static final String TEMP_DIR_OSM = "osmtemp/";
+    public static final String OSMARENDER_BASE = "osmarender6";
 
 }
