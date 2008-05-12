@@ -1,0 +1,34 @@
+<project xmlns:artifact="antlib:org.apache.maven.artifact.ant">
+
+    <!--
+      This Ant build file is intended to be imported in order to include
+      Maven dependency processing, which creates classpath IDs for building.
+    -->
+
+    <!-- The Maven central repository. -->
+    <artifact:remoteRepository id="central" url="http://repo1.maven.org/maven2/">
+        <snapshots enabled ="false" />
+    </artifact:remoteRepository>
+
+    <!-- Set the reference ID of the Maven POM file. -->
+    <artifact:pom id="maven.pom" file="pom.xml" />
+
+    <!-- Declare this module's dependencies: non-test. -->
+    <artifact:dependencies pathId="compile.dependencies"
+                           filesetId="compile.dependencies.fileset"
+                           versionsId="compile.dependencies.versions"
+                           useScope="compile">
+        <pom refid="maven.pom" />
+        <remoteRepository refid="central" />
+    </artifact:dependencies>
+
+    <!-- Declare this module's dependencies: test. -->
+    <artifact:dependencies pathId="compile.test.dependencies"
+                           filesetId="compile.test.dependencies.fileset"
+                           versionsId="compile.test.dependencies.versions"
+                           useScope="test">
+        <pom refid="maven.pom" />
+        <remoteRepository refid="central" />
+    </artifact:dependencies>
+
+</project>
