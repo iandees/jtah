@@ -7,8 +7,6 @@ import com.yellowbkpk.jtah.pipeline.command.DataDownloadCommand;
 import com.yellowbkpk.jtah.pipeline.command.PipelineCommand;
 import com.yellowbkpk.jtah.pipeline.command.TranslateCommand;
 
-import javax.swing.text.NumberFormatter;
-
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Rectangle2D.Double;
 import java.io.BufferedReader;
