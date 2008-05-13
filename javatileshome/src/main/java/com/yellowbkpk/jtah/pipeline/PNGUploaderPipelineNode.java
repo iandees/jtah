@@ -2,18 +2,25 @@ package com.yellowbkpk.jtah.pipeline;
 
 import com.ge.medit.util.Conduit;
 
+import com.yellowbkpk.jtah.pipeline.command.TranslateCommand;
+
 public class PNGUploaderPipelineNode implements PipelineNode {
 
-    /**
-     * @param renderToUploadPipe
-     */
+    private Conduit inputPipe;
+
     public PNGUploaderPipelineNode(Conduit inputPipe) {
-        // TODO Auto-generated constructor stub
+        this.inputPipe = inputPipe;
     }
 
     public void run() {
-        // TODO Auto-generated method stub
-
+        while(true) {
+            try {
+                Object dequeue = inputPipe.dequeue();
+                System.err.println("Translator dequeued " + dequeue);
+                TranslateCommand comm = (TranslateCommand) dequeue;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
-
 }

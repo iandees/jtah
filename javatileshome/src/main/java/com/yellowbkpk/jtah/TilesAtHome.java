@@ -5,6 +5,7 @@ import com.ge.medit.util.SimpleQueue;
 
 import com.yellowbkpk.jtah.pipeline.DequeuePipelineNode;
 import com.yellowbkpk.jtah.pipeline.OSMDataDownloadPipelineNode;
+import com.yellowbkpk.jtah.pipeline.PNGSplitterPipelineNode;
 import com.yellowbkpk.jtah.pipeline.PNGUploaderPipelineNode;
 import com.yellowbkpk.jtah.pipeline.PipelineNode;
 import com.yellowbkpk.jtah.pipeline.RenderSVGPipelineNode;
@@ -29,12 +30,17 @@ public class TilesAtHome {
         new Thread(translator, "Translate OSM").start();
         
         // Render the SVG to PNG
-        Conduit renderToUploadPipe = new SimpleQueue();
-        PipelineNode renderer = new RenderSVGPipelineNode(translateToRenderPipe, renderToUploadPipe);
+        Conduit renderToSplitterPipe = new SimpleQueue();
+        PipelineNode renderer = new RenderSVGPipelineNode(translateToRenderPipe, renderToSplitterPipe);
         new Thread(renderer, "Render SVG").start();
         
+        // Split the large PNG to many smaller ones
+        Conduit splitterToUploaderPipe = new SimpleQueue();
+        PipelineNode splitter = new PNGSplitterPipelineNode(translateToRenderPipe, splitterToUploaderPipe);
+        new Thread(splitter, "Split PNG").start();
+        
         // Upload the PNG to the server
-        PipelineNode uploader = new PNGUploaderPipelineNode(renderToUploadPipe);
+        PipelineNode uploader = new PNGUploaderPipelineNode(splitterToUploaderPipe);
         new Thread(uploader, "Uploader").start();
         
         while(true) {
