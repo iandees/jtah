@@ -1,7 +1,5 @@
 package com.yellowbkpk.jtah.pipeline;
 
-import com.ge.medit.util.Conduit;
-
 import com.yellowbkpk.jtah.Config;
 import com.yellowbkpk.jtah.pipeline.command.PipelineCommand;
 import com.yellowbkpk.jtah.pipeline.command.RenderCommand;
@@ -24,18 +22,19 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 
 public class TranslateOSMPipelineNode implements PipelineNode {
 
-    private Conduit inputPipe;
-    private Conduit outputPipe;
+    private BlockingQueue<PipelineCommand> inputPipe;
+    private BlockingQueue<PipelineCommand> outputPipe;
 
     /**
      * @param inputPipe
      * @param outputPipe
      */
-    public TranslateOSMPipelineNode(Conduit inputPipe,
-            Conduit outputPipe) {
+    public TranslateOSMPipelineNode(BlockingQueue<PipelineCommand> inputPipe,
+            BlockingQueue<PipelineCommand> outputPipe) {
         this.inputPipe = inputPipe;
         this.outputPipe = outputPipe;
     }
@@ -43,7 +42,7 @@ public class TranslateOSMPipelineNode implements PipelineNode {
     public void run() {
         while(true) {
             try {
-                Object dequeue = inputPipe.dequeue();
+                Object dequeue = inputPipe.take();
                 System.err.println("Translator dequeued " + dequeue);
                 TranslateCommand comm = (TranslateCommand) dequeue;
 
@@ -104,7 +103,7 @@ public class TranslateOSMPipelineNode implements PipelineNode {
 
                 // Stick it on the queue
                 System.err.println("Translator enqueued " + renderCommand);
-                outputPipe.enqueue(renderCommand);
+                outputPipe.put(renderCommand);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (TransformerConfigurationException e) {

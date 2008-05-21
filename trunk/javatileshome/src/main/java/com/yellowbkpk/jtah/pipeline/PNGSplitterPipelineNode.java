@@ -1,7 +1,6 @@
 package com.yellowbkpk.jtah.pipeline;
 
-import com.ge.medit.util.Conduit;
-
+import com.yellowbkpk.jtah.pipeline.command.PipelineCommand;
 import com.yellowbkpk.jtah.pipeline.command.SplitterCommand;
 
 import javax.imageio.ImageIO;
@@ -10,13 +9,14 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.BlockingQueue;
 
 public class PNGSplitterPipelineNode implements PipelineNode {
 
-    private Conduit inputPipe;
-    private Conduit outputPipe;
+    private BlockingQueue<PipelineCommand> inputPipe;
+    private BlockingQueue<PipelineCommand> outputPipe;
 
-    public PNGSplitterPipelineNode(Conduit inputPipe, Conduit outputPipe) {
+    public PNGSplitterPipelineNode(BlockingQueue<PipelineCommand> inputPipe, BlockingQueue<PipelineCommand> outputPipe) {
         this.inputPipe = inputPipe;
         this.outputPipe = outputPipe;
     }
@@ -24,7 +24,7 @@ public class PNGSplitterPipelineNode implements PipelineNode {
     public void run() {
         while (true) {
             try {
-                Object dequeue = inputPipe.dequeue();
+                Object dequeue = inputPipe.take();
                 System.err.println("Splitter dequeued " + dequeue);
                 SplitterCommand comm = (SplitterCommand) dequeue;
 
