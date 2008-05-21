@@ -1,8 +1,6 @@
 package com.yellowbkpk.jtah.pipeline;
 
 
-import com.ge.medit.util.Conduit;
-
 import com.yellowbkpk.jtah.Config;
 import com.yellowbkpk.jtah.pipeline.command.DataDownloadCommand;
 import com.yellowbkpk.jtah.pipeline.command.PipelineCommand;
@@ -13,15 +11,16 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.concurrent.BlockingQueue;
 
 public class DequeuePipelineNode implements PipelineNode {
 
-    private Conduit outPipe;
+    private BlockingQueue<PipelineCommand> outPipe;
 
     /**
      * @param outputPipe
      */
-    public DequeuePipelineNode(Conduit outputPipe) {
+    public DequeuePipelineNode(BlockingQueue<PipelineCommand> outputPipe) {
         outPipe = outputPipe;
     }
 
@@ -59,7 +58,7 @@ public class DequeuePipelineNode implements PipelineNode {
                     
                     // Enqueue the command
                     System.err.println("Job dequeuer enqueued " + command);
-                    outPipe.enqueue(command);
+                    outPipe.put(command);
                 } else {
                     System.err.println("Wrong return from server: " + line);
                 }

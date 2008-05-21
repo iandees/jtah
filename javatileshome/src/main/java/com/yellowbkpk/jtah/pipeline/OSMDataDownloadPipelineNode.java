@@ -1,7 +1,5 @@
 package com.yellowbkpk.jtah.pipeline;
 
-import com.ge.medit.util.Conduit;
-
 import com.yellowbkpk.jtah.Config;
 import com.yellowbkpk.jtah.pipeline.command.DataDownloadCommand;
 import com.yellowbkpk.jtah.pipeline.command.PipelineCommand;
@@ -21,20 +19,21 @@ import java.net.URLConnection;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 
 public class OSMDataDownloadPipelineNode implements PipelineNode {
 
     private static final double limitY = lat2y(Math.toDegrees(Math.atan(Math.sinh(Math.PI))));
     private static final double rangeY = 2.0 * limitY;
-    private Conduit inputPipe;
-    private Conduit outputPipe;
+    private BlockingQueue<PipelineCommand> inputPipe;
+    private BlockingQueue<PipelineCommand> outputPipe;
 
     /**
      * @param inputPipe
      * @param outputPipe
      */
-    public OSMDataDownloadPipelineNode(Conduit inputPipe,
-            Conduit outputPipe) {
+    public OSMDataDownloadPipelineNode(BlockingQueue<PipelineCommand> inputPipe,
+            BlockingQueue<PipelineCommand> outputPipe) {
         this.inputPipe = inputPipe;
         this.outputPipe = outputPipe;
     }
@@ -42,7 +41,7 @@ public class OSMDataDownloadPipelineNode implements PipelineNode {
     public void run() {
         while(true) {
             try {
-                Object dequeue = inputPipe.dequeue();
+                Object dequeue = inputPipe.take();
                 System.err.println("Downloder dequeued " + dequeue);
                 DataDownloadCommand comm = (DataDownloadCommand) dequeue;
                 
@@ -81,7 +80,7 @@ public class OSMDataDownloadPipelineNode implements PipelineNode {
                 
                 // Stick it on the queue
                 System.err.println("Downloader enqueued " + translateCommand);
-                outputPipe.enqueue(translateCommand);
+                outputPipe.add(translateCommand);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (MalformedURLException e) {

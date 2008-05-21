@@ -1,7 +1,5 @@
 package com.yellowbkpk.jtah.pipeline;
 
-import com.ge.medit.util.Conduit;
-
 import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
@@ -18,21 +16,22 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 
 public class RenderSVGPipelineNode implements PipelineNode {
 
-    private Conduit inputPipe;
-    private Conduit outputPipe;
+    private BlockingQueue<PipelineCommand> inputPipe;
+    private BlockingQueue<PipelineCommand> outputPipe;
 
-    public RenderSVGPipelineNode(Conduit inputPipe,
-            Conduit outputPipe) {
+    public RenderSVGPipelineNode(BlockingQueue<PipelineCommand> inputPipe,
+            BlockingQueue<PipelineCommand> outputPipe) {
         this.inputPipe = inputPipe;
         this.outputPipe = outputPipe;
     }
 
     public void run() {
         try {
-            Object dequeue = inputPipe.dequeue();
+            Object dequeue = inputPipe.take();
             System.err.println("Renderer dequeued " + dequeue);
             RenderCommand comm = (RenderCommand) dequeue;
             
@@ -53,7 +52,7 @@ public class RenderSVGPipelineNode implements PipelineNode {
             
             // Enqueue a slicer job
             PipelineCommand sliceCommand = new SliceCommand(comm.getBoundingBox(), outputFile);
-            outputPipe.enqueue(sliceCommand);
+            outputPipe.put(sliceCommand);
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (TranscoderException e) {

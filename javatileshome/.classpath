@@ -4,7 +4,6 @@
 	<classpathentry kind="src" output="target/classes-test" path="src/test/java"/>
 	<classpathentry kind="src" path="src/main/resources"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="var" path="M2_REPO/ms/corundum/util/4-15/util-4-15.jar"/>
 	<classpathentry kind="var" path="M2_REPO/batik/batik/1.5/batik-1.5.jar"/>
 	<classpathentry kind="var" path="M2_REPO/xalan/xalan/2.6.0/xalan-2.6.0.jar"/>
 	<classpathentry kind="var" path="M2_REPO/batik/batik-transcoder/1.6/batik-transcoder-1.6.jar"/>
