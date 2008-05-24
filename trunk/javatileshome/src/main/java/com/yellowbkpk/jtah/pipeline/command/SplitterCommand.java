@@ -1,5 +1,6 @@
 package com.yellowbkpk.jtah.pipeline.command;
 
+import java.awt.geom.Rectangle2D.Double;
 import java.io.File;
 
 public class SplitterCommand implements PipelineCommand {
@@ -8,23 +9,20 @@ public class SplitterCommand implements PipelineCommand {
     private int tilesNeededX;
     private int tilesNeededY;
 
-    /**
-     * @return
-     */
+    public SplitterCommand(Double boundingBox, File outputFile, int tilesNeededX, int tilesNeededY) {
+        this.largeImage = outputFile;
+        this.tilesNeededX = tilesNeededX;
+        this.tilesNeededY = tilesNeededY;
+    }
+
     public File getLargeImageFile() {
         return largeImage;
     }
 
-    /**
-     * @return
-     */
     public int getTilesNeededX() {
         return tilesNeededX;
     }
 
-    /**
-     * @return
-     */
     public int getTilesNeededY() {
         return tilesNeededY;
     }
