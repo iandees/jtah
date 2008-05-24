@@ -9,5 +9,6 @@ public class Config {
     public static final String OSM_VERSION = "0.5";
     public static final String TEMP_DIR_OSM = "osmtemp/";
     public static final String OSMARENDER_BASE = "osmarender6";
+    public static final int MAX_ZOOM = 16;
 
 }

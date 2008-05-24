@@ -37,7 +37,7 @@ public class TilesAtHome {
         
         // Split the large PNG to many smaller ones
         BlockingQueue<PipelineCommand>  splitterToUploaderPipe = new ArrayBlockingQueue<PipelineCommand>(6);
-        PipelineNode splitter = new PNGSplitterPipelineNode(translateToRenderPipe, splitterToUploaderPipe);
+        PipelineNode splitter = new PNGSplitterPipelineNode(renderToSplitterPipe, splitterToUploaderPipe);
         new Thread(splitter, "Split PNG").start();
         
         // Upload the PNG to the server

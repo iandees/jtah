@@ -5,10 +5,10 @@ import com.yellowbkpk.jtah.pipeline.command.SplitterCommand;
 
 import javax.imageio.ImageIO;
 
-import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 
 public class PNGSplitterPipelineNode implements PipelineNode {
@@ -42,7 +42,6 @@ public class PNGSplitterPipelineNode implements PipelineNode {
 
                 // Create the source buffered image
                 BufferedImage sourceImage = ImageIO.read(inputImage);
-                Graphics sourceGraphics = sourceImage.getGraphics();
 
                 // TODO Could check to see if the requested tiles will fit in
                 // the source image correctly at this point.
@@ -50,13 +49,23 @@ public class PNGSplitterPipelineNode implements PipelineNode {
                 // Create a buffered image the size of the target tile(s)
                 BufferedImage targetImage = new BufferedImage(targetImgWidth, targetImgHeight,
                         BufferedImage.TYPE_INT_ARGB);
-                Graphics targetGraphics = targetImage.getGraphics();
 
-                // Loop through the chunks of the tile
-                // Determine the relative X and Y coords to pick from
-                // Copy the source image to the target image
-                // Write the target image out to file
-                // Add the new tile to the list of tiles that were split
+                // Loop through the chunks of the source tile
+                int sourceWidth = sourceImage.getWidth();
+                int sourceHeight = sourceImage.getHeight();
+                for(int x = 1; x < sourceWidth; x += targetImgWidth) {
+                    for(int y = 1; y < sourceHeight; y += targetImgHeight) {
+                        // Copy the source image to the target image
+                        BufferedImage subimage = sourceImage.getSubimage(x, y, targetImgWidth, targetImgHeight);
+                        
+                        // Write the target image out to file
+                        File outFile = new File(UUID.randomUUID() + ".png");
+                        ImageIO.write(subimage, "PNG", outFile);
+                        System.err.println("Saving chunk " + x + "," + y + " to " + outFile);
+                        // Add the new tile to the list of tiles that were split
+                        
+                    }
+                }
                 
             } catch (InterruptedException e) {
                 e.printStackTrace();

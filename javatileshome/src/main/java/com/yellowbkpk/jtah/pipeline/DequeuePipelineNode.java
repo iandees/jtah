@@ -65,7 +65,7 @@ public class DequeuePipelineNode implements PipelineNode {
                 
                 // Wait a while to do the next request.
                 // TODO Should wait a certain amount depending on how long the output queue is.
-                Thread.sleep(50000);
+                Thread.sleep(500000);
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
