@@ -69,7 +69,7 @@ public class OSMDataDownloadPipelineNode extends AbstractPipelineNode {
                 System.err.println("Done saving data.");
                 
                 // Create the translate command for the zoom level that was requested
-                PipelineCommand translateCommand = new TranslateCommand(boundingBox, comm.getZ(), tempFilePath);
+                PipelineCommand translateCommand = new TranslateCommand(boundingBox, comm.getX(), comm.getY(), comm.getZ(), comm.getLayer(), tempFilePath);
                 
                 // Stick it on the queue
                 System.err.println("Downloader enqueued " + translateCommand);

@@ -5,24 +5,21 @@ import java.awt.geom.Rectangle2D.Double;
 
 public class TranslateCommand implements PipelineCommand {
 
-    private Double bbox;
+    private Rectangle2D.Double bbox;
+    private int tileX;
+    private int tileY;
+    private String tileLayer;
     private String filePath;
     private int zoom;
 
-    /**
-     * @param boundingBox
-     * @param zoom 
-     * @param osmDataFilePath 
-     */
-    public TranslateCommand(Rectangle2D.Double boundingBox, int zoom, String osmDataFilePath) {
+    public TranslateCommand(Rectangle2D.Double boundingBox, int x, int y, int zoom, String layer, String osmDataFilePath) {
         this.bbox = boundingBox;
+        this.tileX = x;
+        this.tileY = y;
         this.zoom = zoom;
         this.filePath = osmDataFilePath;
     }
 
-    /**
-     * @return the bounding box.
-     */
     public Double getBoundingBox() {
         return bbox;
     }
@@ -34,4 +31,17 @@ public class TranslateCommand implements PipelineCommand {
     public int getZoom() {
         return zoom;
     }
+
+    public int getTileX() {
+        return tileX;
+    }
+
+    public int getTileY() {
+        return tileY;
+    }
+
+    public String getTileLayer() {
+        return tileLayer;
+    }
+    
 }

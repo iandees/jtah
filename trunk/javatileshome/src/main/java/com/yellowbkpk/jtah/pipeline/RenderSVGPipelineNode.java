@@ -57,7 +57,7 @@ public class RenderSVGPipelineNode extends AbstractPipelineNode {
                 int tilesNeeded = imgSize / 256;
 
                 // Enqueue a slicer job
-                PipelineCommand sliceCommand = new SplitterCommand(comm.getBoundingBox(), outputFile, tilesNeeded, tilesNeeded);
+                PipelineCommand sliceCommand = new SplitterCommand(comm.getBoundingBox(), outputFile, comm.getTileX(), comm.getTileY(), comm.getTileZ(), comm.getTileLayer());
                 getOutputPipe().put(sliceCommand);
             } catch (InterruptedException e) {
                 e.printStackTrace();
