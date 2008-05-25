@@ -1,26 +1,25 @@
 package com.yellowbkpk.jtah.pipeline.command;
 
-import java.awt.geom.Rectangle2D.Double;
 import java.io.File;
 
-public class SplitterCommand implements PipelineCommand {
+public class UploadCommand implements PipelineCommand {
 
-    private File largeImage;
+    private File outFile;
     private int tileX;
     private int tileY;
     private int tileZ;
     private String tileLayer;
 
-    public SplitterCommand(Double boundingBox, File outputFile, int tileX, int tileY, int tileZ, String layer) {
-        this.largeImage = outputFile;
+    public UploadCommand(File outFile, int tileX, int tileY, int tileZ, String layer) {
+        this.outFile = outFile;
         this.tileX = tileX;
         this.tileY = tileY;
         this.tileZ = tileZ;
         this.tileLayer = layer;
     }
 
-    public File getLargeImageFile() {
-        return largeImage;
+    public File getOutFile() {
+        return outFile;
     }
 
     public int getTileX() {
@@ -30,12 +29,12 @@ public class SplitterCommand implements PipelineCommand {
     public int getTileY() {
         return tileY;
     }
-    
+
     public int getTileZ() {
         return tileZ;
     }
 
-    public String getLayer() {
+    public String getTileLayer() {
         return tileLayer;
     }
 

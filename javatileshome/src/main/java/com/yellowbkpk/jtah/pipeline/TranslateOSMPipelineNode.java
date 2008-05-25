@@ -44,6 +44,10 @@ public class TranslateOSMPipelineNode extends AbstractPipelineNode {
 
                 // The zoom level that we start with
                 int startZoomLevel = comm.getZoom();
+                // The tile that was requested
+                int tileX = comm.getTileX();
+                int tileY = comm.getTileY();
+                String layer = comm.getTileLayer();
                 
                 // This is the "bootstrap" xsl file
                 File translationFile = new File(Config.OSMARENDER_BASE + "/osmarender.xsl");
@@ -102,12 +106,16 @@ public class TranslateOSMPipelineNode extends AbstractPipelineNode {
                     System.err.println("Translated " + imageSize + "px square image for zoom level " + zoom);
                     
                     // Create a render command
-                    PipelineCommand renderCommand = new RenderCommand(comm.getBoundingBox(), svgFile, imageSize);
+                    PipelineCommand renderCommand = new RenderCommand(comm.getBoundingBox(), tileX, tileY, zoom, layer, svgFile, imageSize);
                     System.err.println("Translator enqueued " + renderCommand);
                     getOutputPipe().put(renderCommand);
                     
                     // After we send it to the queue, the next pass needs to be twice as wide/tall
                     imageSize = imageSize * 2;
+                    
+                    // The position of the "upper left" tile needs to change as we zoom in
+                    tileX = 2 * tileX;
+                    tileY = 2 * tileX;
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();

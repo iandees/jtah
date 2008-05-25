@@ -2,6 +2,7 @@ package com.yellowbkpk.jtah.pipeline;
 
 import com.yellowbkpk.jtah.pipeline.command.PipelineCommand;
 import com.yellowbkpk.jtah.pipeline.command.SplitterCommand;
+import com.yellowbkpk.jtah.pipeline.command.UploadCommand;
 
 import javax.imageio.ImageIO;
 
@@ -28,8 +29,10 @@ public class PNGSplitterPipelineNode extends AbstractPipelineNode {
                 File inputImage = comm.getLargeImageFile();
 
                 // Figure out the number of times we have to split the image
-                int tilesAccrossX = comm.getTilesNeededX();
-                int tilesAccrossY = comm.getTilesNeededY();
+                int tileX = comm.getTileX();
+                int tileY = comm.getTileY();
+                int tileZ = comm.getTileZ();
+                String layer = comm.getLayer();
 
                 // TODO For now these should be 256, but perhaps they could be
                 // smaller later?
@@ -58,9 +61,14 @@ public class PNGSplitterPipelineNode extends AbstractPipelineNode {
                         File outFile = new File(UUID.randomUUID() + ".png");
                         ImageIO.write(subimage, "PNG", outFile);
                         System.err.println("Saving chunk " + x + "," + y + " to " + outFile);
-                        // Add the new tile to the list of tiles that were split
                         
+                        // Add the new tile to the list of tiles that were split
+                        PipelineCommand uploadCommand = new UploadCommand(outFile, tileX, tileY, tileZ, layer);
+                        getOutputPipe().add(uploadCommand);
+                        
+                        tileY++;
                     }
+                    tileX++;
                 }
                 
             } catch (InterruptedException e) {
