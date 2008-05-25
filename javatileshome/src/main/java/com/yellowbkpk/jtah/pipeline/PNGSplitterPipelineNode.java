@@ -11,20 +11,16 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 
-public class PNGSplitterPipelineNode implements PipelineNode {
-
-    private BlockingQueue<PipelineCommand> inputPipe;
-    private BlockingQueue<PipelineCommand> outputPipe;
+public class PNGSplitterPipelineNode extends AbstractPipelineNode {
 
     public PNGSplitterPipelineNode(BlockingQueue<PipelineCommand> inputPipe, BlockingQueue<PipelineCommand> outputPipe) {
-        this.inputPipe = inputPipe;
-        this.outputPipe = outputPipe;
+        super(inputPipe, outputPipe);
     }
 
     public void run() {
         while (true) {
             try {
-                Object dequeue = inputPipe.take();
+                Object dequeue = getInputPipe().take();
                 System.err.println("Splitter dequeued " + dequeue);
                 SplitterCommand comm = (SplitterCommand) dequeue;
 
@@ -53,8 +49,8 @@ public class PNGSplitterPipelineNode implements PipelineNode {
                 // Loop through the chunks of the source tile
                 int sourceWidth = sourceImage.getWidth();
                 int sourceHeight = sourceImage.getHeight();
-                for(int x = 1; x < sourceWidth; x += targetImgWidth) {
-                    for(int y = 1; y < sourceHeight; y += targetImgHeight) {
+                for(int x = 0; x < sourceWidth; x += targetImgWidth) {
+                    for(int y = 0; y < sourceHeight; y += targetImgHeight) {
                         // Copy the source image to the target image
                         BufferedImage subimage = sourceImage.getSubimage(x, y, targetImgWidth, targetImgHeight);
                         

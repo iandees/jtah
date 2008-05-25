@@ -21,27 +21,20 @@ import java.text.NumberFormat;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 
-public class OSMDataDownloadPipelineNode implements PipelineNode {
+public class OSMDataDownloadPipelineNode extends AbstractPipelineNode {
 
     private static final double limitY = lat2y(Math.toDegrees(Math.atan(Math.sinh(Math.PI))));
     private static final double rangeY = 2.0 * limitY;
-    private BlockingQueue<PipelineCommand> inputPipe;
-    private BlockingQueue<PipelineCommand> outputPipe;
 
-    /**
-     * @param inputPipe
-     * @param outputPipe
-     */
     public OSMDataDownloadPipelineNode(BlockingQueue<PipelineCommand> inputPipe,
             BlockingQueue<PipelineCommand> outputPipe) {
-        this.inputPipe = inputPipe;
-        this.outputPipe = outputPipe;
+        super(inputPipe, outputPipe);
     }
 
     public void run() {
         while(true) {
             try {
-                Object dequeue = inputPipe.take();
+                Object dequeue = getInputPipe().take();
                 System.err.println("Downloder dequeued " + dequeue);
                 DataDownloadCommand comm = (DataDownloadCommand) dequeue;
                 
@@ -80,7 +73,7 @@ public class OSMDataDownloadPipelineNode implements PipelineNode {
                 
                 // Stick it on the queue
                 System.err.println("Downloader enqueued " + translateCommand);
-                outputPipe.add(translateCommand);
+                getOutputPipe().add(translateCommand);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (MalformedURLException e) {
