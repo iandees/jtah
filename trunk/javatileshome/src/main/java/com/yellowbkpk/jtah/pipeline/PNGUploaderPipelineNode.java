@@ -5,18 +5,16 @@ import com.yellowbkpk.jtah.pipeline.command.TranslateCommand;
 
 import java.util.concurrent.BlockingQueue;
 
-public class PNGUploaderPipelineNode implements PipelineNode {
-
-    private BlockingQueue<PipelineCommand> inputPipe;
+public class PNGUploaderPipelineNode extends AbstractPipelineNode {
 
     public PNGUploaderPipelineNode(BlockingQueue<PipelineCommand> inputPipe) {
-        this.inputPipe = inputPipe;
+        super(inputPipe, null);
     }
 
     public void run() {
         while(true) {
             try {
-                Object dequeue = inputPipe.take();
+                Object dequeue = getInputPipe().take();
                 System.err.println("Translator dequeued " + dequeue);
                 TranslateCommand comm = (TranslateCommand) dequeue;
             } catch (InterruptedException e) {

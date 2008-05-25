@@ -24,24 +24,16 @@ import java.text.NumberFormat;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 
-public class TranslateOSMPipelineNode implements PipelineNode {
+public class TranslateOSMPipelineNode extends AbstractPipelineNode {
 
-    private BlockingQueue<PipelineCommand> inputPipe;
-    private BlockingQueue<PipelineCommand> outputPipe;
-
-    /**
-     * @param inputPipe
-     * @param outputPipe
-     */
     public TranslateOSMPipelineNode(BlockingQueue<PipelineCommand> inputPipe, BlockingQueue<PipelineCommand> outputPipe) {
-        this.inputPipe = inputPipe;
-        this.outputPipe = outputPipe;
+        super(inputPipe, outputPipe);
     }
 
     public void run() {
         while (true) {
             try {
-                Object dequeue = inputPipe.take();
+                Object dequeue = getInputPipe().take();
                 System.err.println("Translator dequeued " + dequeue);
                 TranslateCommand comm = (TranslateCommand) dequeue;
 
@@ -112,7 +104,7 @@ public class TranslateOSMPipelineNode implements PipelineNode {
                     // Create a render command
                     PipelineCommand renderCommand = new RenderCommand(comm.getBoundingBox(), svgFile, imageSize);
                     System.err.println("Translator enqueued " + renderCommand);
-                    outputPipe.put(renderCommand);
+                    getOutputPipe().put(renderCommand);
                     
                     // After we send it to the queue, the next pass needs to be twice as wide/tall
                     imageSize = imageSize * 2;

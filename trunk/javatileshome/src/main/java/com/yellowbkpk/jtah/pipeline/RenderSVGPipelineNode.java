@@ -18,21 +18,17 @@ import java.net.MalformedURLException;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 
-public class RenderSVGPipelineNode implements PipelineNode {
-
-    private BlockingQueue<PipelineCommand> inputPipe;
-    private BlockingQueue<PipelineCommand> outputPipe;
+public class RenderSVGPipelineNode extends AbstractPipelineNode {
 
     public RenderSVGPipelineNode(BlockingQueue<PipelineCommand> inputPipe,
             BlockingQueue<PipelineCommand> outputPipe) {
-        this.inputPipe = inputPipe;
-        this.outputPipe = outputPipe;
+        super(inputPipe, outputPipe);
     }
 
     public void run() {
         while (true) {
             try {
-                Object dequeue = inputPipe.take();
+                Object dequeue = getInputPipe().take();
                 System.err.println("Renderer dequeued " + dequeue);
                 RenderCommand comm = (RenderCommand) dequeue;
 
@@ -62,7 +58,7 @@ public class RenderSVGPipelineNode implements PipelineNode {
 
                 // Enqueue a slicer job
                 PipelineCommand sliceCommand = new SplitterCommand(comm.getBoundingBox(), outputFile, tilesNeeded, tilesNeeded);
-                outputPipe.put(sliceCommand);
+                getOutputPipe().put(sliceCommand);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (TranscoderException e) {

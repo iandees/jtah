@@ -13,15 +13,10 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.concurrent.BlockingQueue;
 
-public class DequeuePipelineNode implements PipelineNode {
+public class DequeuePipelineNode extends AbstractPipelineNode {
 
-    private BlockingQueue<PipelineCommand> outPipe;
-
-    /**
-     * @param outputPipe
-     */
     public DequeuePipelineNode(BlockingQueue<PipelineCommand> outputPipe) {
-        outPipe = outputPipe;
+        super(null, outputPipe);
     }
 
     public void run() {
@@ -58,7 +53,7 @@ public class DequeuePipelineNode implements PipelineNode {
                     
                     // Enqueue the command
                     System.err.println("Job dequeuer enqueued " + command);
-                    outPipe.put(command);
+                    getOutputPipe().put(command);
                 } else {
                     System.err.println("Wrong return from server: " + line);
                 }
