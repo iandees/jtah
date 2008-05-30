@@ -18,6 +18,7 @@ public class TranslateCommand implements PipelineCommand {
         this.tileY = y;
         this.zoom = zoom;
         this.filePath = osmDataFilePath;
+        this.tileLayer = layer;
     }
 
     public Double getBoundingBox() {
