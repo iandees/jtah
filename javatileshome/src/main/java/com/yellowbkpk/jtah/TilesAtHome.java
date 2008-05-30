@@ -21,22 +21,22 @@ public class TilesAtHome {
         new Thread(dequeuer, "Dequeue").start();
         
         // Download the data using the OSM API
-        BlockingQueue<PipelineCommand>  downloadToTranslatePipe = new ArrayBlockingQueue<PipelineCommand>(6);
+        BlockingQueue<PipelineCommand>  downloadToTranslatePipe = new ArrayBlockingQueue<PipelineCommand>(64);
         PipelineNode downloader = new OSMDataDownloadPipelineNode(dequeueToDownloadPipe, downloadToTranslatePipe);
         new Thread(downloader, "OSM Download").start();
         
         // Translate the OSM data into SVG
-        BlockingQueue<PipelineCommand>  translateToRenderPipe = new ArrayBlockingQueue<PipelineCommand>(6);
+        BlockingQueue<PipelineCommand>  translateToRenderPipe = new ArrayBlockingQueue<PipelineCommand>(64);
         PipelineNode translator = new TranslateOSMPipelineNode(downloadToTranslatePipe, translateToRenderPipe);
         new Thread(translator, "Translate OSM").start();
         
         // Render the SVG to PNG
-        BlockingQueue<PipelineCommand>  renderToSplitterPipe = new ArrayBlockingQueue<PipelineCommand>(6);
+        BlockingQueue<PipelineCommand>  renderToSplitterPipe = new ArrayBlockingQueue<PipelineCommand>(1024);
         PipelineNode renderer = new RenderSVGPipelineNode(translateToRenderPipe, renderToSplitterPipe);
         new Thread(renderer, "Render SVG").start();
         
         // Split the large PNG to many smaller ones
-        BlockingQueue<PipelineCommand>  splitterToUploaderPipe = new ArrayBlockingQueue<PipelineCommand>(6);
+        BlockingQueue<PipelineCommand>  splitterToUploaderPipe = new ArrayBlockingQueue<PipelineCommand>(1024);
         PipelineNode splitter = new PNGSplitterPipelineNode(renderToSplitterPipe, splitterToUploaderPipe);
         new Thread(splitter, "Split PNG").start();
         
